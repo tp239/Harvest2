@@ -1,0 +1,75 @@
+(* takes in a 5x5 array of integers, returning the coordinates of any saddle points *)
+
+
+(* takes in a row, the max of that row, the row number, 0, and an empty list *)
+(* RETURNS a list of tuples of ((x,y), max), where (x,y) is the position and max is the value *)
+(* a is the row we are getting the max of, max is the current max value, *)
+(* rowNum is row number, xPos is position in row *)
+let rec getMax (a : int list) (max : int) (rowNum : int) (xPos : int) e = 
+  match a with
+		| h::t -> if (h = max) then getMax t max rowNum (xPos+1) (((xPos,rowNum),h)::e) else getMax t max rowNum (xPos+1) e
+		| [] -> e
+(* ex - getMax row negativeNumber*) (*[1;2;3;4;1;6;2;32] max*)
+in
+(* returns the max value of the row *)
+let rec findMaxInRow (a:int list) (b:int)= 
+	match a with
+		| h::t -> if (h > b) then findMaxInRow t h else findMaxInRow t b
+		| [] -> b
+(* NOTE: WHEN PASSING IN -1, IT MUST BE IN PARENTHESIS (-1) OR ELSE ERROR *)
+in
+
+(* returns a list of tuples of ((xCoordinate, yCoordinate), max value) for the entire array *)
+(* a is the array, b is the list of ((x,y), max), c is row number *)
+let rec main (a : int list list) (b : ((int*int)*int) list) (c : int)=
+	match a with
+		| h::t -> main t (getMax h (findMaxInRow h (-1)) c 0 b) (c+1)
+		| [] -> List.rev b
+(* ex - main [[1;2;3];[2;3;4];[3;4;5]] [] 0;; *)
+in
+
+(* a is list from main, b is original 5x5 array, results is a list of how many times the row max is less than the column value *)
+(* RETURNS a list of ints, 1 if it is in the column position of row b and 0 otherwise*)
+(*    this means that if there are 4 1s, it is a saddle point *)
+let rec calculate (a : ((int*int)*int)) (b : int list list) (results : int list)=
+  (* helper takes the current tuple of ((x,y), max value) and compares*)
+	(*   them to the other values in the same column, one row at a time *)
+  (* RETURNS 1 if max in maxMin <= same pos. in the column it is in and 0 otherwise*)
+  let rec helper (maxMin : ((int*int)*int)) (currentRow : int list) (currentPosition : int) = 
+	  let xPosition= fst (fst maxMin) in
+		match currentRow with
+			| h1::t1 -> if (xPosition = currentPosition) then (* if the x pos of the max is equal to the x pos in the row *)
+				                            (if ((snd maxMin) <= h1) then 1 else 0) (* if it's a min compared to this row then 1 else 0 *)
+											 else helper maxMin t1 (currentPosition + 1)
+			| _ -> 0
+	in
+	match b with
+		| h1::t1 -> calculate a t1 ((helper a h1 0)::results)
+		| [] -> results
+in
+
+(* take in ((x,y),max) tuples, 5x5 matrix to check columns*)
+(* output: (x,y) of saddle point*)
+(* HOW:*)
+(*   - pass ((x,y) max) and the 5x5 into calculate to see if it is a saddle point by checking if there are five 1s*)
+(*   - if so, cons (x,y) onto a tracker list*)
+(*   - repeat with other ((x,y),max) values *)
+(*   - return the tracker list *)
+let rec outputCoords (a : ((int*int)*int) list) (array : int list list) (saddlePointCoords : (int*int) list)=
+	match a with
+		| h::t -> 
+					(let numberMaxMin= calculate h array [] in
+					  if (List.length (List.fold_left (fun a b -> if b = 1 then 1::a else a) [] numberMaxMin) = 5)
+						  then outputCoords t array ((fst h)::saddlePointCoords)
+							else outputCoords t array saddlePointCoords)
+		| [] -> (List.fold_left (fun a (b,c) -> (c,b)::a) [] saddlePointCoords)
+in
+let engine x=
+	let tuples= main x [] 0 in
+	let outcome= outputCoords tuples x []
+	in if (List.length outcome = 0) then failwith "There are no saddle points" else outcome
+in engine [[39; 43; 49; 29; 18]; [30; 47; 24; 29; 15]; [49; 50; 39; 20; 33];
+ [18; 38; 35; 32; 38]; [29; 44; 18; 34; 44]];; (* replace this array with the one you want *)
+
+(* [[1; 1; 1; 1; 8]; [1; 1; 1; 8; 1]; [1; 1; 8; 1; 1]; [7; 1; 9; 1; 1]; [5; 5; 5; 5; 5]]*)
+(* [[1; 2; 3; 4; 5]; [3; 2; 34; 14; 16]; [445; 1; 5; 67; 11]; [1; 5; 7; 2; 7]; [8; 8; 8; 8; 8]]*)
